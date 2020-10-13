@@ -26,6 +26,7 @@ from util import run  # noqa: E402
 log = get_logger("build")
 
 
+
 class BaseError(Exception):
     """Base class for errors originating from build.py."""
     pass
@@ -636,6 +637,7 @@ def setup_test_data(build_dir, configs):
                 run_subprocess(['mklink', '/D', '/J', dest_model_dir,
                                 src_model_dir], shell=True)
 
+
 def check_all_flags_supported(input_flags):
     supported = False
     # No Windows support for now
@@ -651,6 +653,7 @@ def check_all_flags_supported(input_flags):
     except subprocess.CalledProcessError:
         pass
     return supported
+
 
 def use_dev_mode(args):
     if args.use_acl:
@@ -1020,6 +1023,7 @@ def generate_build_tree(cmake_path, source_dir, build_dir, cuda_home, cudnn_home
                  args.enable_msvc_static_runtime
                  else "OFF"), "-DCMAKE_BUILD_TYPE={}".format(config)],
             cwd=config_build_dir)
+
 
 def clean_targets(cmake_path, build_dir, configs):
     for config in configs:
