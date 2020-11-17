@@ -4,8 +4,6 @@
 #include "python/onnxruntime_pybind_exceptions.h"
 #include "python/onnxruntime_pybind_state_common.h"
 
-#include <fstream>
-
 // pybind11/stl.h is needed to support std::unordered_set, etc.
 #include <pybind11/stl.h>
 
@@ -341,13 +339,6 @@ void addObjectMethodsForTraining(py::module& m) {
         if (!use_nccl && parameters.world_size > 1)
           CopyMPIContextToTrainingParameters(parameters, sess->GetSessionHandle()->GetLogger());
 #endif
-        std::string dbg_flag_line;
-        std::ifstream dbg_flag_file("dbg_flag.txt");
-        if (dbg_flag_file.is_open()) {
-          std::getline(dbg_flag_file, dbg_flag_line);
-          dbg_flag_file.close();
-        }
-
         const auto config_result = ConfigureSessionForTraining(static_cast<TrainingSession*>(sess->GetSessionHandle()), parameters);
 
         std::vector<std::string> provider_types = {};

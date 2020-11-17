@@ -1,10 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#include <set>
-#include <thread>
-#include "core/profile/context.h"
-
 #include "orttraining/core/session/training_session.h"
 
 #include "core/framework/data_transfer_utils.h"
@@ -41,6 +37,12 @@
 
 #if defined(USE_NCCL) && defined(USE_NCCL_P2P)
 #include "orttraining/training_ops/cuda/communication/nccl_service.h"
+#endif
+
+#ifdef ENABLE_NVTX_PROFILE
+#include <set>
+#include <thread>
+#include "core/profile/context.h"
 #endif
 
 namespace onnxruntime {
@@ -151,6 +153,9 @@ void TrainingSession::FilterUnusedWeights(const std::unordered_set<std::string>&
 
 const std::string TrainingSession::training_mode_string_ = "training_mode";
 
+// Create NCCL's communication plan. In runtime, we will provide details such
+// as pointer to sent/recieved data and the size of the data in byte. See how
+// Send and Recv call SubmitSendAndWait and SubmitRecvAndWait, respectively.
 void TrainingSession::LaunchNcclService(const int pipeline_stage_id) {
   auto& nccl_service = cuda::NcclService::GetInstance();
 
@@ -165,8 +170,10 @@ void TrainingSession::LaunchNcclService(const int pipeline_stage_id) {
     nccl_service.PlanNewGroupStart();
     for (auto& task : slot.GetTasks()) {
       if (task.type == pipeline::PipelineTask::Type::Send) {
+        // In this time slot, stage "pipeline_stage_id" sendss data to "task.peer_rank".
         nccl_service.PlanSend(task.peer_rank);
       } else if (task.type == pipeline::PipelineTask::Type::Recv) {
+        // In this time slot, stage "pipeline_stage_id" recieves data from "task.peer_rank".
         nccl_service.PlanRecv(task.peer_rank);
       }
     }
@@ -187,9 +194,6 @@ Status TrainingSession::ConfigureForTraining(
       "TrainingSession::ConfigureForTraining() must be called before TrainingSession::Initialize().");
 
   if (is_configured_) return Status::OK();
-
-  if (config.distributed_config.world_rank == 0)
-    ORT_IGNORE_RETURN_VALUE(Save(std::string("simple_forward") + std::string(".onnx"), SaveOption::NO_RELOAD));
 
   std::unordered_set<std::string> filtered_config_weight_names_to_train;
   FilterUnusedWeights(config.weight_names_to_train, filtered_config_weight_names_to_train);
@@ -358,7 +362,7 @@ Status TrainingSession::ConfigureForTraining(
     pipeline_schedule_ = pipeline::PipelineScheduler(num_pipeline_steps, num_pipeline_stages);
     pipeline_worker_pool_ = pipeline::PipelineWorkerPool(num_pipeline_stages);
 
-    // Declar a place holder for pipeline configuration.
+    // Declare a place holder for pipeline configuration.
     TrainingConfigurationResult::PipelineConfigurationResult pipeline_result{};
     ORT_RETURN_IF_ERROR(InsertPipelineOps(weight_names_to_train,
                                           graph_output_names,
@@ -447,7 +451,7 @@ Status TrainingSession::ConfigureForTraining(
         optimizer_config_result.output_key_to_graph_output_name));
 
 
-    const bool is_gradient_accumulation_enabled = opt_graph_config_.gradient_accumulation_steps > 1;
+    const bool is_gradient_accumulation_enabled = opt_graph_config_.gradient_accumulation_steps > 1 || config.distributed_config.pipeline_parallel_size > 1;
     if (is_gradient_accumulation_enabled) {
       const auto& opt_output_key_to_graph_output_name =
           optimizer_config_result.output_key_to_graph_output_name;
@@ -502,9 +506,6 @@ Status TrainingSession::ConfigureForTraining(
     ORT_RETURN_IF_ERROR(AddGistEncoding());
   }
 
-  ORT_IGNORE_RETURN_VALUE(Save(
-      std::string("pp_") + std::string(std::to_string(config.distributed_config.world_rank)) + std::string(".onnx"), SaveOption::NO_RELOAD));
-
   // If the current node is in rank0 or if the current session is running pipeline (in which case different rank would
   // store different model partition), and if model_with_training_graph_path is specified, save the model.
   // Note: in the pipeline case, different ranks may resident in the same node. This could lead to a potential write
@@ -543,7 +544,6 @@ Status TrainingSession::ConfigureForTraining(
   config_result_out = std::move(config_result);
   is_configured_ = true;
 
-  ORT_IGNORE_RETURN_VALUE(Save(std::string("simple_final_stage_") + std::to_string(config.distributed_config.world_rank) + std::string(".onnx"), SaveOption::NO_RELOAD));
   return Status::OK();
 }
 
@@ -1097,7 +1097,6 @@ void TrainingSession::CreateBatchVariables(
   ORT_ENFORCE(inputs.size() == input_names.size());
 
   // Slice input tensors.
-  // TODO: need to specify which tensor to slice.
   for (size_t i = 0; i < inputs.size(); ++i) {
     auto name = input_names[i];
     if (pipeline_context_.slice_input_names.find(name) != pipeline_context_.slice_input_names.end()) {
@@ -1114,7 +1113,6 @@ void TrainingSession::CreateBatchVariables(
   ORT_ENFORCE(outputs.size() == output_names.size());
 
   // Slice output tensors.
-  // TODO: need to specify which tensor to slice.
   for (size_t i = 0; i < outputs.size(); ++i) {
     auto name = output_names[i];
     if (pipeline_context_.slice_output_names.find(name) != pipeline_context_.slice_output_names.end()) {
