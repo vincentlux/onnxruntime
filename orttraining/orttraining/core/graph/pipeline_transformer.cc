@@ -17,7 +17,7 @@ void CreateFakeOutput(
     Graph& graph,
     std::string output_name,
     const ONNX_NAMESPACE::TensorShapeProto* reference_shape_proto,
-    std::unordered_map<std::string, std::vector<int>> sub_shapes) {
+    std::unordered_map<std::string, std::vector<int>> sliced_schema) {
   const int32_t element_type = ONNX_NAMESPACE::TensorProto_DataType_FLOAT;
   ONNX_NAMESPACE::TypeProto type_proto;
   type_proto.mutable_tensor_type()->set_elem_type(element_type);
@@ -33,9 +33,9 @@ void CreateFakeOutput(
   // Shape of a variable can be found in the ONNX model or a dictionary defined by the user.
   // If the dictionary contains a shape, we use that shape as the actual output shape.
   // Otherwise, we extract the shape loaded from the ONNX model.
-  if (sub_shapes.find(output_name) != sub_shapes.end()) {
+  if (sliced_schema.find(output_name) != sliced_schema.end()) {
     // Get shape passed in by user.
-    auto shape = sub_shapes[output_name];
+    auto shape = sliced_schema[output_name];
     for (auto d : shape) {
       tensor_proto.add_dims(d);
       reference_size *= d;
@@ -457,7 +457,7 @@ Status TransformGraphForPipeline(
     const std::unordered_set<std::string>& weights_to_train,
     std::vector<std::string> graph_output_names,
     std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes,
-    std::unordered_map<std::string, std::vector<int>> sub_shapes,
+    std::unordered_map<std::string, std::vector<int>> sliced_schema,
     std::string& forward_recv_waited_event_name,
     std::string& forward_recv_wait_output_name,
     std::string& forward_recv_recorded_event_name,
@@ -720,7 +720,7 @@ Status TransformGraphForPipeline(
       continue;
     }
     // TODO: this function should create fake output based on input shape.
-    CreateFakeOutput(graph, name, &shape, sub_shapes); 
+    CreateFakeOutput(graph, name, &shape, sliced_schema); 
     new_output_names.push_back(name);
   }
 

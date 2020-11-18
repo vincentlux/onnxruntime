@@ -76,7 +76,7 @@ class TrainingSession : public InferenceSession {
       // This field contains ONNX model's names for output tensors to be sliced. 
       std::vector<std::string> sliced_output_names;
       // Shapes of sliced inputs and outputs.
-      std::unordered_map<std::string, std::vector<int>> sub_shapes;
+      std::unordered_map<std::string, std::vector<int>> sliced_schema;
     };
     // The distributed training configuration.
     DistributedConfiguration distributed_config{};
@@ -425,7 +425,7 @@ class TrainingSession : public InferenceSession {
                                    std::vector<std::string> graph_output_names,
                                    std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes,
                                    pipeline::PipelineTensorNames& pipeline_tensor_names,
-                                   std::unordered_map<std::string, std::vector<int>> sub_shapes);
+                                   std::unordered_map<std::string, std::vector<int>> sliced_schema);
 
   common::Status ApplyTransformationsToMainGraph(std::unordered_set<std::string>& weights_to_train,
                                                  const TrainingConfiguration::GraphTransformerConfiguration& config,

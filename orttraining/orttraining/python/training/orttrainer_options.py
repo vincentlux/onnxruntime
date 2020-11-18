@@ -117,7 +117,7 @@ class ORTTrainerOptions(object):
                             'type' : 'boolean',
                             'default' : False
                         },
-                        'sub_shapes' : {
+                        'sliced_schema' : {
                             "type": "dict",
                             # the keys in `employee_eligibility` are strings matching this regex
                             "keysrules": {"type": "string"},
@@ -523,7 +523,7 @@ _ORTTRAINER_OPTIONS_SCHEMA = {
                 'type': 'boolean',
                 'default': False
             },
-            'sub_shapes' : {
+            'sliced_schema' : {
                 'type': 'dict',
                 'keysrules': {'type': 'string'},
                 'valuesrules': {
@@ -534,11 +534,13 @@ _ORTTRAINER_OPTIONS_SCHEMA = {
             },
             'sliced_input_names' : {
                 'type': 'list',
-                'schema': {'type': 'string'}
+                'schema': {'type': 'string'},
+                'default': []
             },
             'sliced_output_names' : {
                 'type': 'list',
-                'schema': {'type': 'string'}
+                'schema': {'type': 'string'},
+                'default': []
             }
         }
     },

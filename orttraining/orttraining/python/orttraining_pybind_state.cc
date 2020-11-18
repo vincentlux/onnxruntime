@@ -32,7 +32,7 @@ struct TrainingParameters {
   std::string lr_params_feed_name = "Learning_Rate";
   std::unordered_map<std::string, std::unordered_map<std::string, float>> optimizer_attributes_map;
   std::unordered_map<std::string, std::unordered_map<std::string, int64_t>> optimizer_int_attributes_map;
-  std::unordered_map<std::string, std::vector<int>> sub_shapes;
+  std::unordered_map<std::string, std::vector<int>> sliced_schema;
   std::vector<std::string> sliced_input_names;
   std::vector<std::string> sliced_output_names;
   bool use_fp16_moments = false;
@@ -99,7 +99,7 @@ TrainingConfigurationResult ConfigureSessionForTraining(
   config.distributed_config.horizontal_parallel_size = parameters.horizontal_parallel_size;
   config.distributed_config.pipeline_parallel_size = parameters.pipeline_parallel_size;
   config.distributed_config.num_pipeline_steps = parameters.num_pipeline_steps;
-  config.distributed_config.sub_shapes = parameters.sub_shapes;
+  config.distributed_config.sliced_schema = parameters.sliced_schema;
   config.distributed_config.sliced_input_names = parameters.sliced_input_names;
   config.distributed_config.sliced_output_names = parameters.sliced_output_names;
 
@@ -256,7 +256,7 @@ void addObjectMethodsForTraining(py::module& m) {
       .def_readwrite("lr_params_feed_name", &TrainingParameters::lr_params_feed_name)
       .def_readwrite("optimizer_attributes_map", &TrainingParameters::optimizer_attributes_map)
       .def_readwrite("optimizer_int_attributes_map", &TrainingParameters::optimizer_int_attributes_map)
-      .def_readwrite("sub_shapes", &TrainingParameters::sub_shapes)
+      .def_readwrite("sliced_schema", &TrainingParameters::sliced_schema)
       .def_readwrite("use_fp16_moments", &TrainingParameters::use_fp16_moments)
       .def_readwrite("use_mixed_precision", &TrainingParameters::use_mixed_precision)
       .def_readwrite("allreduce_post_accumulation", &TrainingParameters::allreduce_post_accumulation)
