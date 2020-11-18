@@ -16,13 +16,10 @@ namespace training {
 void CreateFakeOutput(
     Graph& graph,
     const std::string output_name,
-    const ONNX_NAMESPACE::TensorShapeProto* reference_shape_proto,
     const std::unordered_map<std::string, std::vector<int>>& sliced_schema) {
   const int32_t element_type = ONNX_NAMESPACE::TensorProto_DataType_FLOAT;
   ONNX_NAMESPACE::TypeProto type_proto;
   type_proto.mutable_tensor_type()->set_elem_type(element_type);
-  ONNX_NAMESPACE::TensorShapeProto* tensor_shape_proto = type_proto.mutable_tensor_type()->mutable_shape();
-  tensor_shape_proto->CopyFrom(*reference_shape_proto);
   auto& seed_node_arg = graph.GetOrCreateNodeArg(output_name + "_seed", &type_proto);
 
   ONNX_NAMESPACE::TensorProto tensor_proto;
@@ -33,28 +30,21 @@ void CreateFakeOutput(
   // Shape of a variable can be found in the ONNX model or a dictionary defined by the user.
   // If the dictionary contains a shape, we use that shape as the actual output shape.
   // Otherwise, we extract the shape loaded from the ONNX model.
-  if (sliced_schema.find(output_name) != sliced_schema.end()) {
-    // Get shape passed in by user.
-    auto shape = sliced_schema.at(output_name);
-    for (auto d : shape) {
-      tensor_proto.add_dims(d);
-      reference_size *= d;
-    }
-  } else {
-    // Get shape stored in ONNX model.
-    for (auto d : reference_shape_proto->dim()) {
-      ORT_ENFORCE(d.dim_value() != 0, "variable \"", output_name, "\" cannot have symbolic shape.");
-      int64_t dim_value = d.dim_value();
-      tensor_proto.add_dims(dim_value);
-      reference_size *= dim_value;
-    }
+  ORT_ENFORCE(sliced_schema.find(output_name) != sliced_schema.end());
+  // Get shape passed in by user.
+  auto shape = sliced_schema.at(output_name);
+  for (auto d : shape) {
+    tensor_proto.add_dims(d);
+    reference_size *= d;
   }
 
+  // Assign dummy values.
   for (int64_t i = 0; i < reference_size; ++i) {
     tensor_proto.add_float_data(1.0f);
   }
   graph.AddInitializedTensor(tensor_proto);
 
+  // Make a node to produce output.
   auto output_node_arg = graph.GetNodeArg(output_name);
   std::vector<NodeArg*> input_args{&seed_node_arg};
   std::vector<NodeArg*> output_args{output_node_arg};
@@ -455,7 +445,6 @@ Status TransformGraphForPipeline(
     Graph& graph,
     const std::unordered_set<std::string>& weights_to_train,
     const std::vector<std::string>& graph_output_names,
-    const std::vector<ONNX_NAMESPACE::TensorShapeProto>& graph_output_shapes,
     const std::unordered_map<std::string, std::vector<int>>& sliced_schema,
     std::string& forward_recv_waited_event_name,
     std::string& forward_recv_wait_output_name,
@@ -712,7 +701,6 @@ Status TransformGraphForPipeline(
 
   for (size_t i = 0; i < graph_output_names.size(); ++i) {
     const std::string name = graph_output_names[i];
-    const ONNX_NAMESPACE::TensorShapeProto shape = graph_output_shapes[i];
 
     auto producer = graph.GetProducerNode(name);
     if (producer) {
@@ -721,7 +709,7 @@ Status TransformGraphForPipeline(
 
     // For each graph output which doesn't produce by this pipeline stage,
     // we create a fake tensor with user-specified shape.
-    CreateFakeOutput(graph, name, &shape, sliced_schema);
+    CreateFakeOutput(graph, name, sliced_schema);
     new_output_names.push_back(name);
   }
 

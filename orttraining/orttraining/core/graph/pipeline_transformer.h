@@ -16,7 +16,6 @@ Status TransformGraphForPipeline(
     Graph& graph,
     const std::unordered_set<std::string>& initializer_names_to_preserve,
     const std::vector<std::string>& graph_output_names,
-    const std::vector<ONNX_NAMESPACE::TensorShapeProto>& graph_output_shapes,
     const std::unordered_map<std::string, std::vector<int>>& sliced_schema,
     std::string& forward_recv_waited_event_name,
     std::string& forward_recv_wait_output_name,

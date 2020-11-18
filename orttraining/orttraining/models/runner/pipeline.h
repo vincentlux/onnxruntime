@@ -330,8 +330,9 @@ struct PipelineContext {
   // only execute until gradient accumulation step.
   std::vector<std::string> accumulation_step_fetches;
 
-  std::unordered_map<std::string, int> sliced_axes;
   std::vector<std::string> sliced_tensor_names;
+  std::unordered_map<std::string, int> sliced_axes;
+  std::unordered_map<std::string, std::vector<int>> sliced_schema;
 };
 
 }  // namespace pipeline

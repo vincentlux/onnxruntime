@@ -215,7 +215,6 @@ Status TrainingSession::ConfigureForTraining(
   const int32_t pipeline_stage_id = config.pipeline_config.has_value() ? DistributedRunContext::RankInGroup(WorkerGroupType::ModelParallel) : -1;
 
   std::vector<std::string> graph_output_names;
-  std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes;
   if (config.pipeline_config.has_value() && config.pipeline_config.value().do_partition) {
     // Apply online pipeline partition to graph obj. This needs to be done first before any graph
     // transportation which may alter node_arg and invalidate cut_list info from the original graph.
@@ -224,7 +223,6 @@ Status TrainingSession::ConfigureForTraining(
     for (auto& output_node_arg : model_->MainGraph().GetOutputs()) {
       std::string name = output_node_arg->Name();
       graph_output_names.push_back(name);
-      graph_output_shapes.push_back(*output_node_arg->Shape());
     }
 
     ORT_RETURN_IF_ERROR(ApplyPipelinePartitionToMainGraph(model_->MainGraph(),
@@ -360,13 +358,13 @@ Status TrainingSession::ConfigureForTraining(
     pipeline_schedule_ = pipeline::PipelineScheduler(num_pipeline_steps, num_pipeline_stages);
     pipeline_worker_pool_ = pipeline::PipelineWorkerPool(num_pipeline_stages);
 
+    // Insert InsertPipelineOps may access "sliced_schema" from "pipeline_context_".
+    pipeline_context_.sliced_schema = config.distributed_config.sliced_schema;
     // Declare a place holder for pipeline configuration.
     TrainingConfigurationResult::PipelineConfigurationResult pipeline_result{};
     ORT_RETURN_IF_ERROR(InsertPipelineOps(weight_names_to_train,
                                           graph_output_names,
-                                          graph_output_shapes,
-                                          pipeline_result.pipeline_tensor_names,
-                                          config.distributed_config.sliced_schema));
+                                          pipeline_result.pipeline_tensor_names));
 
     // Records which which tensors can be fed into the graph.
     // It may be different than the original graph because of extra event tensors.
@@ -757,15 +755,12 @@ Status TrainingSession::AddTensorboard(const std::string& summary_name,
 Status TrainingSession::InsertPipelineOps(
     const std::unordered_set<std::string>& initializer_names_to_preserve,
     const std::vector<std::string>& graph_output_names,
-    const std::vector<ONNX_NAMESPACE::TensorShapeProto>& graph_output_shapes,
-    pipeline::PipelineTensorNames& pipeline_tensor_names,
-    const std::unordered_map<std::string, std::vector<int>>& sliced_schema) {
+    pipeline::PipelineTensorNames& pipeline_tensor_names) {
   ORT_RETURN_IF_ERROR(TransformGraphForPipeline(
       model_->MainGraph(),
       initializer_names_to_preserve,
       graph_output_names,
-      graph_output_shapes,
-      sliced_schema,
+      pipeline_context_.sliced_schema,
       pipeline_tensor_names.forward_recv_waited_event_name,
       pipeline_tensor_names.forward_recv_wait_output_name,
       pipeline_tensor_names.forward_recv_recorded_event_name,
