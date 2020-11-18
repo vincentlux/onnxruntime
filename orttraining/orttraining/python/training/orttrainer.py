@@ -649,6 +649,7 @@ class ORTTrainer(object):
         ort_parameters.original_batch_size = self.options.distributed.original_batch_size
         ort_parameters.pipeline_batch_size = self.options.distributed.pipeline_batch_size
         ort_parameters.pipeline_cut_info_string = self.options.distributed.pipeline_cut_info_string
+        ort_parameters.sub_shapes = self.options.distributed.sub_shapes
 
         # SessionOptions
         session_options = ort.SessionOptions()

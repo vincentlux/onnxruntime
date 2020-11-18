@@ -368,7 +368,7 @@ Status TrainingSession::ConfigureForTraining(
                                           graph_output_names,
                                           graph_output_shapes,
                                           pipeline_result.pipeline_tensor_names,
-                                          config.distributed_config.pipeline_batch_size));
+                                          config.distributed_config.sub_shapes));
 
     // Records which which tensors can be fed into the graph.
     // It may be different than the original graph because of extra event tensors.
@@ -765,13 +765,13 @@ Status TrainingSession::InsertPipelineOps(
     std::vector<std::string> graph_output_names,
     std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes,
     pipeline::PipelineTensorNames& pipeline_tensor_names,
-    const size_t batch_size) {
+    std::unordered_map<std::string, std::vector<int>> sub_shapes) {
   ORT_RETURN_IF_ERROR(TransformGraphForPipeline(
       model_->MainGraph(),
       initializer_names_to_preserve,
       graph_output_names,
       graph_output_shapes,
-      batch_size,
+      sub_shapes,
       pipeline_tensor_names.forward_recv_waited_event_name,
       pipeline_tensor_names.forward_recv_wait_output_name,
       pipeline_tensor_names.forward_recv_recorded_event_name,

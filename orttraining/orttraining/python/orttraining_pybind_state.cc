@@ -37,6 +37,7 @@ struct TrainingParameters {
   std::string lr_params_feed_name = "Learning_Rate";
   std::unordered_map<std::string, std::unordered_map<std::string, float>> optimizer_attributes_map;
   std::unordered_map<std::string, std::unordered_map<std::string, int64_t>> optimizer_int_attributes_map;
+  std::unordered_map<std::string, std::vector<int>> sub_shapes;
   bool use_fp16_moments = false;
 
   bool use_mixed_precision = false;
@@ -108,6 +109,15 @@ TrainingConfigurationResult ConfigureSessionForTraining(
   config.distributed_config.original_batch_size = parameters.original_batch_size;
   config.distributed_config.pipeline_batch_size = parameters.pipeline_batch_size;
   config.distributed_config.num_pipeline_steps = parameters.num_pipeline_steps;
+  config.distributed_config.sub_shapes = parameters.sub_shapes;
+
+  std::cout << "Printing shapes..." << std::endl;
+  for (auto item : parameters.sub_shapes) {
+    std::cout << "item name: " << item.first << std::endl;
+    for (auto d : item.second) {
+      std::cout << item.first << " dim " << d << std::endl;
+    }
+  }
 
   if (parameters.use_mixed_precision) {
     training::TrainingSession::TrainingConfiguration::MixedPrecisionConfiguration mp{};
@@ -262,6 +272,7 @@ void addObjectMethodsForTraining(py::module& m) {
       .def_readwrite("lr_params_feed_name", &TrainingParameters::lr_params_feed_name)
       .def_readwrite("optimizer_attributes_map", &TrainingParameters::optimizer_attributes_map)
       .def_readwrite("optimizer_int_attributes_map", &TrainingParameters::optimizer_int_attributes_map)
+      .def_readwrite("sub_shapes", &TrainingParameters::sub_shapes)
       .def_readwrite("use_fp16_moments", &TrainingParameters::use_fp16_moments)
       .def_readwrite("use_mixed_precision", &TrainingParameters::use_mixed_precision)
       .def_readwrite("allreduce_post_accumulation", &TrainingParameters::allreduce_post_accumulation)

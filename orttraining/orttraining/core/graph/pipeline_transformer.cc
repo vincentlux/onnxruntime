@@ -13,7 +13,11 @@ using namespace onnxruntime::graph_utils;
 namespace onnxruntime {
 namespace training {
 
-void CreateFakeOutput(Graph& graph, std::string output_name, const ONNX_NAMESPACE::TensorShapeProto* reference_shape_proto, const int batch_size) {
+void CreateFakeOutput(
+    Graph& graph,
+    std::string output_name,
+    const ONNX_NAMESPACE::TensorShapeProto* reference_shape_proto,
+    std::unordered_map<std::string, std::vector<int>> sub_shapes) {
   const int32_t element_type = ONNX_NAMESPACE::TensorProto_DataType_FLOAT;
   ONNX_NAMESPACE::TypeProto type_proto;
   type_proto.mutable_tensor_type()->set_elem_type(element_type);
@@ -25,13 +29,30 @@ void CreateFakeOutput(Graph& graph, std::string output_name, const ONNX_NAMESPAC
   tensor_proto.set_name(seed_node_arg.Name());
   tensor_proto.set_data_type(element_type);
   int64_t reference_size = 1;
-  for (auto d: reference_shape_proto->dim()) {
-    // TODO: this "2" should be computed by applying Shape operator on input.
-    int64_t dim_value = d.dim_value() != 0 ? d.dim_value() : batch_size;
-    std::cout << "[pipeline_transformer.cc] dim_value: " << dim_value << std::endl;
-    tensor_proto.add_dims(dim_value);
-    reference_size *= dim_value;
+
+  // Shape of a variable can be found in the ONNX model or a dictionary defined by the user.
+  // If the dictionary contains a shape, we use that shape as the actual output shape.
+  // Otherwise, we extract the shape loaded from the ONNX model.
+  if (sub_shapes.find(output_name) != sub_shapes.end()) {
+    // Get shape passed in by user.
+    auto shape = sub_shapes[output_name];
+    for (auto d : shape) {
+      std::cout << "[pipeline_transformer.cc] user, " << output_name << ", " << d << std::endl;
+      tensor_proto.add_dims(d);
+      reference_size *= d;
+    }
+  } else {
+    // Get shape stored in ONNX model.
+    for (auto d: reference_shape_proto->dim()) {
+      ORT_ENFORCE(d.dim_value() != 0, output_name, " cannot have symbolic shape.");
+      int64_t dim_value = d.dim_value();
+      std::cout << "[pipeline_transformer.cc] auto, " << output_name << ", " << dim_value << std::endl;
+      tensor_proto.add_dims(dim_value);
+      reference_size *= dim_value;
+    }
   }
+
+
   for (int64_t i = 0; i < reference_size; ++i) {
     tensor_proto.add_float_data(1.0f);
   }
@@ -438,7 +459,7 @@ Status TransformGraphForPipeline(
     const std::unordered_set<std::string>& weights_to_train,
     std::vector<std::string> graph_output_names,
     std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes,
-    const size_t batch_size,
+    std::unordered_map<std::string, std::vector<int>> sub_shapes,
     std::string& forward_recv_waited_event_name,
     std::string& forward_recv_wait_output_name,
     std::string& forward_recv_recorded_event_name,
@@ -701,7 +722,7 @@ Status TransformGraphForPipeline(
       continue;
     }
     // TODO: this function should create fake output based on input shape.
-    CreateFakeOutput(graph, name, &shape, batch_size); 
+    CreateFakeOutput(graph, name, &shape, sub_shapes); 
     new_output_names.push_back(name);
   }
 

@@ -126,6 +126,17 @@ class ORTTrainerOptions(object):
                         'enable_adasum' : {
                             'type' : 'boolean',
                             'default' : False
+                        },
+                        'sub_shapes' : {
+                            "type": "dict",
+                            # the keys in `employee_eligibility` are strings matching this regex
+                            "keysrules": {"type": "string"},
+                            # the values in `employee_eligibility` are also dictionaries with keys
+                            # that are strings that match this regex and integer values
+                            "valuesrules": {
+                                "type": "list",
+                                "schema": {'type': 'integer'}
+                            }
                         }
                     }
                 },
@@ -527,8 +538,16 @@ _ORTTRAINER_OPTIONS_SCHEMA = {
             'enable_adasum': {
                 'type': 'boolean',
                 'default': False
+            },
+            'sub_shapes' : {
+                'type': 'dict',
+                'keysrules': {'type': 'string'},
+                'valuesrules': {
+                    'type': 'list',
+                    'schema': {'type': 'integer'}
+                },
+                'default_setter': lambda _: {}
             }
-
         }
     },
     'lr_scheduler': {
