@@ -644,8 +644,8 @@ class ORTTrainer(object):
         ort_parameters.num_pipeline_steps = self.options.distributed.num_pipeline_steps
         ort_parameters.pipeline_cut_info_string = self.options.distributed.pipeline_cut_info_string
         ort_parameters.sliced_schema = self.options.distributed.sliced_schema
-        ort_parameters.sliced_input_names = self.options.distributed.sliced_input_names
-        ort_parameters.sliced_output_names = self.options.distributed.sliced_output_names
+        ort_parameters.sliced_axes = self.options.distributed.sliced_axes
+        ort_parameters.sliced_tensor_names = self.options.distributed.sliced_tensor_names
 
         # SessionOptions
         session_options = ort.SessionOptions()

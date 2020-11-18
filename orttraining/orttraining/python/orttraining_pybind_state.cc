@@ -33,8 +33,8 @@ struct TrainingParameters {
   std::unordered_map<std::string, std::unordered_map<std::string, float>> optimizer_attributes_map;
   std::unordered_map<std::string, std::unordered_map<std::string, int64_t>> optimizer_int_attributes_map;
   std::unordered_map<std::string, std::vector<int>> sliced_schema;
-  std::vector<std::string> sliced_input_names;
-  std::vector<std::string> sliced_output_names;
+  std::unordered_map<std::string, int> sliced_axes;
+  std::vector<std::string> sliced_tensor_names;
   bool use_fp16_moments = false;
 
   bool use_mixed_precision = false;
@@ -100,8 +100,8 @@ TrainingConfigurationResult ConfigureSessionForTraining(
   config.distributed_config.pipeline_parallel_size = parameters.pipeline_parallel_size;
   config.distributed_config.num_pipeline_steps = parameters.num_pipeline_steps;
   config.distributed_config.sliced_schema = parameters.sliced_schema;
-  config.distributed_config.sliced_input_names = parameters.sliced_input_names;
-  config.distributed_config.sliced_output_names = parameters.sliced_output_names;
+  config.distributed_config.sliced_axes = parameters.sliced_axes;
+  config.distributed_config.sliced_tensor_names = parameters.sliced_tensor_names;
 
   if (parameters.use_mixed_precision) {
     training::TrainingSession::TrainingConfiguration::MixedPrecisionConfiguration mp{};
@@ -250,13 +250,13 @@ void addObjectMethodsForTraining(py::module& m) {
       .def_readwrite("immutable_weights", &TrainingParameters::immutable_weights)
       .def_readwrite("weights_not_to_train", &TrainingParameters::weights_not_to_train)
       .def_readwrite("weights_to_train", &TrainingParameters::weights_to_train)
-      .def_readwrite("sliced_input_names", &TrainingParameters::sliced_input_names)
-      .def_readwrite("sliced_output_names", &TrainingParameters::sliced_output_names)
+      .def_readwrite("sliced_tensor_names", &TrainingParameters::sliced_tensor_names)
       .def_readwrite("training_optimizer_name", &TrainingParameters::training_optimizer_name)
       .def_readwrite("lr_params_feed_name", &TrainingParameters::lr_params_feed_name)
       .def_readwrite("optimizer_attributes_map", &TrainingParameters::optimizer_attributes_map)
       .def_readwrite("optimizer_int_attributes_map", &TrainingParameters::optimizer_int_attributes_map)
       .def_readwrite("sliced_schema", &TrainingParameters::sliced_schema)
+      .def_readwrite("sliced_axes", &TrainingParameters::sliced_axes)
       .def_readwrite("use_fp16_moments", &TrainingParameters::use_fp16_moments)
       .def_readwrite("use_mixed_precision", &TrainingParameters::use_mixed_precision)
       .def_readwrite("allreduce_post_accumulation", &TrainingParameters::allreduce_post_accumulation)

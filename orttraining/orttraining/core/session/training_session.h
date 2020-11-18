@@ -71,12 +71,11 @@ class TrainingSession : public InferenceSession {
 
       int pipeline_stage_id{0};
 
-      // This field contains ONNX model's names for input tensors to be sliced. 
-      std::vector<std::string> sliced_input_names;
-      // This field contains ONNX model's names for output tensors to be sliced. 
-      std::vector<std::string> sliced_output_names;
+      // This field contains ONNX model's names for input and output tensors to be sliced.
+      std::vector<std::string> sliced_tensor_names;
       // Shapes of sliced inputs and outputs.
       std::unordered_map<std::string, std::vector<int>> sliced_schema;
+      std::unordered_map<std::string, int> sliced_axes;
     };
     // The distributed training configuration.
     DistributedConfiguration distributed_config{};
@@ -347,8 +346,7 @@ class TrainingSession : public InferenceSession {
 
   void CreateBatchVariables(
       IOBinding& io_binding, IOBinding& sub_io_binding,
-      const size_t slice_id, const size_t slice_axis,
-      const size_t num_slices);
+      const size_t slice_id, const size_t num_slices);
 
   void LaunchNcclService(const int pipeline_stage_id);
 

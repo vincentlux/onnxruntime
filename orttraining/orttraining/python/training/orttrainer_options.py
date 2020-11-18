@@ -128,11 +128,15 @@ class ORTTrainerOptions(object):
                                 "schema": {'type': 'integer'}
                             }
                         },
-                        'sliced_input_names' : {
-                            'type': 'list',
-                            'schema': {'type': 'string'}
+                        'sliced_axes' : {
+                            'type': 'dict',
+                            'keysrules': {'type': 'string'},
+                            'valuesrules': {
+                                'type': 'integer',
+                                'default': 0
+                            }
                         },
-                        'sliced_output_names' : {
+                        'sliced_tensor_names' : {
                             'type': 'list',
                             'schema': {'type': 'string'}
                         }
@@ -532,12 +536,15 @@ _ORTTRAINER_OPTIONS_SCHEMA = {
                 },
                 'default_setter': lambda _: {}
             },
-            'sliced_input_names' : {
-                'type': 'list',
-                'schema': {'type': 'string'},
-                'default': []
+            'sliced_axes' : {
+                'type': 'dict',
+                'keysrules': {'type': 'string'},
+                'valuesrules': {
+                    'type': 'integer',
+                    'default': 0
+                }
             },
-            'sliced_output_names' : {
+            'sliced_tensor_names' : {
                 'type': 'list',
                 'schema': {'type': 'string'},
                 'default': []

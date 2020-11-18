@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <thread>
+#include <unordered_map>
 
 #include "gsl/gsl"
 #include "orttraining/training_ops/cpu/controlflow/event_pool.h"
@@ -329,8 +330,8 @@ struct PipelineContext {
   // only execute until gradient accumulation step.
   std::vector<std::string> accumulation_step_fetches;
 
-  std::vector<std::string> sliced_input_names;
-  std::vector<std::string> sliced_output_names;
+  std::unordered_map<std::string, int> sliced_axes;
+  std::vector<std::string> sliced_tensor_names;
 };
 
 }  // namespace pipeline
