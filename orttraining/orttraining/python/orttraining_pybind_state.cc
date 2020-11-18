@@ -25,11 +25,6 @@ struct TrainingParameters {
   std::unordered_set<std::string> weights_to_train;
   std::unordered_set<std::string> weights_not_to_train;
 
-  // This field contains ONNX model's names for input tensors to be sliced. 
-  std::unordered_set<std::string> slice_input_names;
-  // This field contains ONNX model's names for output tensors to be sliced. 
-  std::unordered_set<std::string> slice_output_names;
-
   onnxruntime::training::TrainingSession::ImmutableWeights immutable_weights;
 
   // optimizer
@@ -38,6 +33,8 @@ struct TrainingParameters {
   std::unordered_map<std::string, std::unordered_map<std::string, float>> optimizer_attributes_map;
   std::unordered_map<std::string, std::unordered_map<std::string, int64_t>> optimizer_int_attributes_map;
   std::unordered_map<std::string, std::vector<int>> sub_shapes;
+  std::vector<std::string> sliced_input_names;
+  std::vector<std::string> sliced_output_names;
   bool use_fp16_moments = false;
 
   bool use_mixed_precision = false;
@@ -52,8 +49,6 @@ struct TrainingParameters {
   int horizontal_parallel_size = 1;
   int pipeline_parallel_size = 1;
   int num_pipeline_steps = 1;
-  int original_batch_size = 1;
-  int pipeline_batch_size = 1;
   int deepspeed_zero_stage = 0;
   bool enable_grad_norm_clip = true;
   bool set_gradients_as_graph_outputs = false;
@@ -90,9 +85,6 @@ TrainingConfigurationResult ConfigureSessionForTraining(
   config.weight_names_to_train = parameters.weights_to_train;
   config.weight_names_to_not_train = parameters.weights_not_to_train;
 
-  config.distributed_config.slice_input_names = parameters.slice_input_names;
-  config.distributed_config.slice_output_names = parameters.slice_output_names;
-
   // This field contains ONNX model's names for output tensors to be sliced. 
   std::unordered_set<std::string> outputs_to_slice;
   config.immutable_weights = parameters.immutable_weights;
@@ -106,18 +98,10 @@ TrainingConfigurationResult ConfigureSessionForTraining(
   config.distributed_config.data_parallel_size = parameters.data_parallel_size;
   config.distributed_config.horizontal_parallel_size = parameters.horizontal_parallel_size;
   config.distributed_config.pipeline_parallel_size = parameters.pipeline_parallel_size;
-  config.distributed_config.original_batch_size = parameters.original_batch_size;
-  config.distributed_config.pipeline_batch_size = parameters.pipeline_batch_size;
   config.distributed_config.num_pipeline_steps = parameters.num_pipeline_steps;
   config.distributed_config.sub_shapes = parameters.sub_shapes;
-
-  std::cout << "Printing shapes..." << std::endl;
-  for (auto item : parameters.sub_shapes) {
-    std::cout << "item name: " << item.first << std::endl;
-    for (auto d : item.second) {
-      std::cout << item.first << " dim " << d << std::endl;
-    }
-  }
+  config.distributed_config.sliced_input_names = parameters.sliced_input_names;
+  config.distributed_config.sliced_output_names = parameters.sliced_output_names;
 
   if (parameters.use_mixed_precision) {
     training::TrainingSession::TrainingConfiguration::MixedPrecisionConfiguration mp{};
@@ -266,8 +250,8 @@ void addObjectMethodsForTraining(py::module& m) {
       .def_readwrite("immutable_weights", &TrainingParameters::immutable_weights)
       .def_readwrite("weights_not_to_train", &TrainingParameters::weights_not_to_train)
       .def_readwrite("weights_to_train", &TrainingParameters::weights_to_train)
-      .def_readwrite("slice_input_names", &TrainingParameters::slice_input_names)
-      .def_readwrite("slice_output_names", &TrainingParameters::slice_output_names)
+      .def_readwrite("sliced_input_names", &TrainingParameters::sliced_input_names)
+      .def_readwrite("sliced_output_names", &TrainingParameters::sliced_output_names)
       .def_readwrite("training_optimizer_name", &TrainingParameters::training_optimizer_name)
       .def_readwrite("lr_params_feed_name", &TrainingParameters::lr_params_feed_name)
       .def_readwrite("optimizer_attributes_map", &TrainingParameters::optimizer_attributes_map)
@@ -282,8 +266,6 @@ void addObjectMethodsForTraining(py::module& m) {
       .def_readwrite("data_parallel_size", &TrainingParameters::data_parallel_size)
       .def_readwrite("horizontal_parallel_size", &TrainingParameters::horizontal_parallel_size)
       .def_readwrite("pipeline_parallel_size", &TrainingParameters::pipeline_parallel_size)
-      .def_readwrite("original_batch_size", &TrainingParameters::original_batch_size)
-      .def_readwrite("pipeline_batch_size", &TrainingParameters::pipeline_batch_size)
       .def_readwrite("pipeline_cut_info_string", &TrainingParameters::pipeline_cut_info_string)
       .def_readwrite("num_pipeline_steps", &TrainingParameters::num_pipeline_steps)
       .def_readwrite("gradient_accumulation_steps", &TrainingParameters::gradient_accumulation_steps)

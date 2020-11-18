@@ -396,11 +396,9 @@ Status TrainingSession::ConfigureForTraining(
     pipeline_context_.pipeline_tensor_names = pipeline_result.pipeline_tensor_names;
     pipeline_context_.num_pipeline_steps = num_pipeline_steps;
     pipeline_context_.num_pipeline_stages = config.distributed_config.pipeline_parallel_size;
-    pipeline_context_.pipeline_batch_size = config.distributed_config.pipeline_batch_size;
-    pipeline_context_.original_batch_size = config.distributed_config.original_batch_size;
     pipeline_context_.pipeline_stage_id = pipeline_result.pipeline_stage_id;
-    pipeline_context_.slice_input_names = config.distributed_config.slice_input_names;
-    pipeline_context_.slice_output_names = config.distributed_config.slice_output_names;
+    pipeline_context_.sliced_input_names = config.distributed_config.sliced_input_names;
+    pipeline_context_.sliced_output_names = config.distributed_config.sliced_output_names;
 
     // Create a local function to append non-empty name to fetch_names list.
     auto append_non_empty_name = [&](const std::string& name) {
@@ -1089,17 +1087,24 @@ void TrainingSession::CreateBatchVariables(
     const size_t slice_id,
     const size_t slice_axis,
     const size_t num_slices) {
-  // Slice inputs into sub-tensors along a specified axis.
-
   auto& inputs = io_binding.GetInputs();
-  auto& input_names = io_binding.GetInputNames();
+  const auto& input_names = io_binding.GetInputNames();
 
-  ORT_ENFORCE(inputs.size() == input_names.size());
+  ORT_ENFORCE(inputs.size() == input_names.size(), "\"input\" and their names are parallel. One input should have one name.");
+
+  auto has_element = [&] (const std::vector<std::string> vector, const std::string element) {
+    auto it = std::find(vector.begin(), vector.end(), element);
+    if (it != vector.end()) {
+      return true;
+    } else {
+      return false;
+    }
+  };
 
   // Slice input tensors.
   for (size_t i = 0; i < inputs.size(); ++i) {
-    auto name = input_names[i];
-    if (pipeline_context_.slice_input_names.find(name) != pipeline_context_.slice_input_names.end()) {
+    const auto name = input_names[i];
+    if (has_element(pipeline_context_.sliced_input_names, name)) {
       OrtValue sliced_value = SliceTensor(inputs[i], slice_id, slice_axis, num_slices, *this);
       sub_io_binding.BindInput(name, sliced_value);
     } else {
@@ -1108,14 +1113,14 @@ void TrainingSession::CreateBatchVariables(
   }
 
   auto& outputs = io_binding.GetOutputs();
-  auto& output_names = io_binding.GetOutputNames();
+  const auto& output_names = io_binding.GetOutputNames();
 
-  ORT_ENFORCE(outputs.size() == output_names.size());
+  ORT_ENFORCE(outputs.size() == output_names.size(), "\"output\" and their names are parallel. One output should have one name.");
 
   // Slice output tensors.
   for (size_t i = 0; i < outputs.size(); ++i) {
-    auto name = output_names[i];
-    if (pipeline_context_.slice_output_names.find(name) != pipeline_context_.slice_output_names.end()) {
+    const auto name = output_names[i];
+    if (has_element(pipeline_context_.sliced_output_names, name)) { 
       OrtValue sliced_value = SliceTensor(outputs[i], slice_id, slice_axis, num_slices, *this);
       sub_io_binding.BindOutput(name, sliced_value);
     } else {
@@ -1207,7 +1212,7 @@ common::Status TrainingSession::RunWithPipeline(const RunOptions& run_options, I
   // TODO: add it to distributed config.
   const size_t slice_axis = 0;
   // TODO: add it to distributed config.
-  const size_t num_steps = pipeline_context_.original_batch_size / pipeline_context_.pipeline_batch_size;
+  const size_t num_steps = pipeline_context_.num_pipeline_steps;
   const size_t stage_id = pipeline_context_.pipeline_stage_id;
   // TODO: add it to distributed config.
   const bool training_mode = true;

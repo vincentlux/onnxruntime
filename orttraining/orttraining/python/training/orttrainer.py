@@ -159,8 +159,6 @@ class ORTTrainer(object):
         self.optim_config = optim_config
 
         # ORTTrainerOptions
-        self.slice_input_names = set()
-        self.slice_output_names = set()
         if not options:
             options = ORTTrainerOptions()
         self.options = options
@@ -632,8 +630,6 @@ class ORTTrainer(object):
         ort_parameters.training_optimizer_name = self.optim_config.name
         ort_parameters.lr_params_feed_name = self.model_desc.learning_rate.name
         ort_parameters.weights_to_train = trainable_params
-        ort_parameters.slice_input_names = self.slice_input_names
-        ort_parameters.slice_output_names = self.slice_output_names
         ort_parameters.optimizer_attributes_map = optimizer_attributes_map
         ort_parameters.optimizer_int_attributes_map = optimizer_int_attributes_map
 
@@ -646,10 +642,10 @@ class ORTTrainer(object):
         ort_parameters.horizontal_parallel_size = self.options.distributed.horizontal_parallel_size
         ort_parameters.pipeline_parallel_size = self.options.distributed.pipeline_parallel_size
         ort_parameters.num_pipeline_steps = self.options.distributed.num_pipeline_steps
-        ort_parameters.original_batch_size = self.options.distributed.original_batch_size
-        ort_parameters.pipeline_batch_size = self.options.distributed.pipeline_batch_size
         ort_parameters.pipeline_cut_info_string = self.options.distributed.pipeline_cut_info_string
         ort_parameters.sub_shapes = self.options.distributed.sub_shapes
+        ort_parameters.sliced_input_names = self.options.distributed.sliced_input_names
+        ort_parameters.sliced_output_names = self.options.distributed.sliced_output_names
 
         # SessionOptions
         session_options = ort.SessionOptions()

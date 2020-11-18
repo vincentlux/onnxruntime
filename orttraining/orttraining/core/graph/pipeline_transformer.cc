@@ -37,16 +37,14 @@ void CreateFakeOutput(
     // Get shape passed in by user.
     auto shape = sub_shapes[output_name];
     for (auto d : shape) {
-      std::cout << "[pipeline_transformer.cc] user, " << output_name << ", " << d << std::endl;
       tensor_proto.add_dims(d);
       reference_size *= d;
     }
   } else {
     // Get shape stored in ONNX model.
     for (auto d: reference_shape_proto->dim()) {
-      ORT_ENFORCE(d.dim_value() != 0, output_name, " cannot have symbolic shape.");
+      ORT_ENFORCE(d.dim_value() != 0, "variable \"", output_name, "\" cannot have symbolic shape.");
       int64_t dim_value = d.dim_value();
-      std::cout << "[pipeline_transformer.cc] auto, " << output_name << ", " << dim_value << std::endl;
       tensor_proto.add_dims(dim_value);
       reference_size *= dim_value;
     }

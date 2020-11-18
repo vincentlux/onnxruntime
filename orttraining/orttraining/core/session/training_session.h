@@ -67,20 +67,15 @@ class TrainingSession : public InferenceSession {
       // The number of pipeline stages.
       int pipeline_parallel_size{1};
 
-      int original_batch_size{1};
-
-      int pipeline_batch_size{1};
-
       int num_pipeline_steps{1};
 
       int pipeline_stage_id{0};
 
       // This field contains ONNX model's names for input tensors to be sliced. 
-      std::unordered_set<std::string> slice_input_names;
-
+      std::vector<std::string> sliced_input_names;
       // This field contains ONNX model's names for output tensors to be sliced. 
-      std::unordered_set<std::string> slice_output_names;
-
+      std::vector<std::string> sliced_output_names;
+      // Shapes of sliced inputs and outputs.
       std::unordered_map<std::string, std::vector<int>> sub_shapes;
     };
     // The distributed training configuration.
