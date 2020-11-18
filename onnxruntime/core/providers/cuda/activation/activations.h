@@ -118,7 +118,7 @@ class Selu final : public UnaryElementwise {
 template <typename T>
 class Sigmoid final : public UnaryElementwise {
  public:
-  Sigmoid(const OpKernelInfo& info) : UnaryElementwise(info) {std::cout << "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy" << std::endl;}
+  Sigmoid(const OpKernelInfo& info) : UnaryElementwise(info) {}
 
   Status ComputeInternal(OpKernelContext* context) const override;
 
