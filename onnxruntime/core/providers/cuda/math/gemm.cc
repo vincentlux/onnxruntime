@@ -5,7 +5,6 @@
 #include "core/providers/cpu/math/gemm_helper.h"
 #include "core/providers/cuda/cuda_common.h"
 #include "core/providers/cuda/shared_inc/fpgeneric.h"
-#include "core/profile/context.h"
 
 namespace onnxruntime {
 namespace cuda {

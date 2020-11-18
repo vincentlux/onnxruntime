@@ -15,9 +15,9 @@ namespace training {
 
 void CreateFakeOutput(
     Graph& graph,
-    std::string output_name,
+    const std::string output_name,
     const ONNX_NAMESPACE::TensorShapeProto* reference_shape_proto,
-    std::unordered_map<std::string, std::vector<int>> sliced_schema) {
+    const std::unordered_map<std::string, std::vector<int>>& sliced_schema) {
   const int32_t element_type = ONNX_NAMESPACE::TensorProto_DataType_FLOAT;
   ONNX_NAMESPACE::TypeProto type_proto;
   type_proto.mutable_tensor_type()->set_elem_type(element_type);
@@ -35,7 +35,7 @@ void CreateFakeOutput(
   // Otherwise, we extract the shape loaded from the ONNX model.
   if (sliced_schema.find(output_name) != sliced_schema.end()) {
     // Get shape passed in by user.
-    auto shape = sliced_schema[output_name];
+    auto shape = sliced_schema.at(output_name);
     for (auto d : shape) {
       tensor_proto.add_dims(d);
       reference_size *= d;
@@ -454,9 +454,9 @@ void FindPipelineLandmarks(
 Status TransformGraphForPipeline(
     Graph& graph,
     const std::unordered_set<std::string>& weights_to_train,
-    std::vector<std::string> graph_output_names,
-    std::vector<ONNX_NAMESPACE::TensorShapeProto> graph_output_shapes,
-    std::unordered_map<std::string, std::vector<int>> sliced_schema,
+    const std::vector<std::string>& graph_output_names,
+    const std::vector<ONNX_NAMESPACE::TensorShapeProto>& graph_output_shapes,
+    const std::unordered_map<std::string, std::vector<int>>& sliced_schema,
     std::string& forward_recv_waited_event_name,
     std::string& forward_recv_wait_output_name,
     std::string& forward_recv_recorded_event_name,

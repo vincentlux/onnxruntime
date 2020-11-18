@@ -12,8 +12,6 @@
 #include "core/providers/cuda/math/binary_elementwise_ops.h"
 #include "core/providers/cuda/math/unary_elementwise_ops_impl.h"
 
-#include "core/profile/context.h"
-
 using namespace onnxruntime::common;
 namespace onnxruntime {
 namespace cuda {
