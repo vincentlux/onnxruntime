@@ -362,9 +362,12 @@ Status TrainingSession::ConfigureForTraining(
     pipeline_context_.sliced_schema = config.distributed_config.sliced_schema;
     // Declare a place holder for pipeline configuration.
     TrainingConfigurationResult::PipelineConfigurationResult pipeline_result{};
+    // Inert special operators for pipeline parallel. It may store information
+    // into "pipeline_context_".
     ORT_RETURN_IF_ERROR(InsertPipelineOps(weight_names_to_train,
-                                          graph_output_names,
-                                          pipeline_result.pipeline_tensor_names));
+                                          graph_output_names));
+    // Copy information in "pipeline_context_" to config result.
+    pipeline_result.pipeline_tensor_names = pipeline_context_.pipeline_tensor_names;
 
     // Records which which tensors can be fed into the graph.
     // It may be different than the original graph because of extra event tensors.
@@ -389,7 +392,6 @@ Status TrainingSession::ConfigureForTraining(
         (config.distributed_config.data_parallel_size * config.distributed_config.horizontal_parallel_size);
 
     // TODO: keep all other pipeline context fields such as feed_names.
-    pipeline_context_.pipeline_tensor_names = pipeline_result.pipeline_tensor_names;
     pipeline_context_.num_pipeline_steps = num_pipeline_steps;
     pipeline_context_.num_pipeline_stages = config.distributed_config.pipeline_parallel_size;
     pipeline_context_.pipeline_stage_id = pipeline_result.pipeline_stage_id;
@@ -754,42 +756,12 @@ Status TrainingSession::AddTensorboard(const std::string& summary_name,
 
 Status TrainingSession::InsertPipelineOps(
     const std::unordered_set<std::string>& initializer_names_to_preserve,
-    const std::vector<std::string>& graph_output_names,
-    pipeline::PipelineTensorNames& pipeline_tensor_names) {
+    const std::vector<std::string>& graph_output_names) {
   ORT_RETURN_IF_ERROR(TransformGraphForPipeline(
       model_->MainGraph(),
       initializer_names_to_preserve,
       graph_output_names,
-      pipeline_context_.sliced_schema,
-      pipeline_tensor_names.forward_recv_waited_event_name,
-      pipeline_tensor_names.forward_recv_wait_output_name,
-      pipeline_tensor_names.forward_recv_recorded_event_name,
-      pipeline_tensor_names.forward_recv_record_output_name,
-      // Event ops' inputs and outputs related to forward Send.
-      pipeline_tensor_names.forward_send_waited_event_name,
-      pipeline_tensor_names.forward_send_wait_output_name,
-      pipeline_tensor_names.forward_send_recorded_event_name,
-      pipeline_tensor_names.forward_send_record_output_name,
-      // Event ops' inputs and outputs related to backward Recv.
-      pipeline_tensor_names.backward_recv_waited_event_name,
-      pipeline_tensor_names.backward_recv_wait_output_name,
-      pipeline_tensor_names.backward_recv_recorded_event_name,
-      pipeline_tensor_names.backward_recv_record_output_name,
-      // Event ops' inputs and outputs related to backward Send.
-      pipeline_tensor_names.backward_send_waited_event_name,
-      pipeline_tensor_names.backward_send_wait_output_name,
-      pipeline_tensor_names.backward_send_recorded_event_name,
-      pipeline_tensor_names.backward_send_record_output_name,
-      // Event ops' inputs and outputs related to forward Compute.
-      pipeline_tensor_names.forward_compute_waited_event_name,
-      pipeline_tensor_names.forward_compute_wait_output_name,
-      pipeline_tensor_names.forward_compute_recorded_event_name,
-      pipeline_tensor_names.forward_compute_record_output_name,
-      // Event ops' inputs and outputs related to backward Compute.
-      pipeline_tensor_names.backward_compute_waited_event_name,
-      pipeline_tensor_names.backward_compute_wait_output_name,
-      pipeline_tensor_names.backward_compute_recorded_event_name,
-      pipeline_tensor_names.backward_compute_record_output_name));
+      pipeline_context_));
   return DoPostLoadProcessing(*model_);
 }
 

@@ -420,8 +420,7 @@ class TrainingSession : public InferenceSession {
   //     identify backward nodes.
   //  4. No event operator is inserted by other graph transform.
   common::Status InsertPipelineOps(const std::unordered_set<std::string>& initializer_names_to_preserve,
-                                   const std::vector<std::string>& graph_output_names,
-                                   pipeline::PipelineTensorNames& pipeline_tensor_names);
+                                   const std::vector<std::string>& graph_output_names);
 
   common::Status ApplyTransformationsToMainGraph(std::unordered_set<std::string>& weights_to_train,
                                                  const TrainingConfiguration::GraphTransformerConfiguration& config,
