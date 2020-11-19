@@ -214,7 +214,9 @@ Status TrainingSession::ConfigureForTraining(
 
   const int32_t pipeline_stage_id = config.pipeline_config.has_value() ? DistributedRunContext::RankInGroup(WorkerGroupType::ModelParallel) : -1;
 
-  std::vector<std::string> graph_output_names;
+  ORT_ENFORCE(pipeline_context_.expected_output_names.empty(),
+              "Uninitialized output name list should be empty. ",
+              "It will be filled with the names of model's outputs when pipeline parallel is used.");
   if (config.pipeline_config.has_value() && config.pipeline_config.value().do_partition) {
     // Apply online pipeline partition to graph obj. This needs to be done first before any graph
     // transportation which may alter node_arg and invalidate cut_list info from the original graph.
@@ -222,7 +224,7 @@ Status TrainingSession::ConfigureForTraining(
 
     for (auto& output_node_arg : model_->MainGraph().GetOutputs()) {
       std::string name = output_node_arg->Name();
-      graph_output_names.push_back(name);
+      pipeline_context_.expected_output_names.push_back(name);
     }
 
     ORT_RETURN_IF_ERROR(ApplyPipelinePartitionToMainGraph(model_->MainGraph(),
@@ -364,8 +366,7 @@ Status TrainingSession::ConfigureForTraining(
     TrainingConfigurationResult::PipelineConfigurationResult pipeline_result{};
     // Inert special operators for pipeline parallel. It may store information
     // into "pipeline_context_".
-    ORT_RETURN_IF_ERROR(InsertPipelineOps(weight_names_to_train,
-                                          graph_output_names));
+    ORT_RETURN_IF_ERROR(InsertPipelineOps(weight_names_to_train));
     // Copy information in "pipeline_context_" to config result.
     pipeline_result.pipeline_tensor_names = pipeline_context_.pipeline_tensor_names;
 
@@ -755,12 +756,10 @@ Status TrainingSession::AddTensorboard(const std::string& summary_name,
 }
 
 Status TrainingSession::InsertPipelineOps(
-    const std::unordered_set<std::string>& initializer_names_to_preserve,
-    const std::vector<std::string>& graph_output_names) {
+    const std::unordered_set<std::string>& initializer_names_to_preserve) {
   ORT_RETURN_IF_ERROR(TransformGraphForPipeline(
       model_->MainGraph(),
       initializer_names_to_preserve,
-      graph_output_names,
       pipeline_context_));
   return DoPostLoadProcessing(*model_);
 }

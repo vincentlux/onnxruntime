@@ -330,8 +330,17 @@ struct PipelineContext {
   // only execute until gradient accumulation step.
   std::vector<std::string> accumulation_step_fetches;
 
+  // Outputs of the graph before graph partition.
+  std::vector<std::string> expected_output_names;
+
+  // Input and output names of sliced tensors in the original graph.
   std::vector<std::string> sliced_tensor_names;
+
+  // sliced_axes["name"] is the axis to slice along for the tensor called "name".
   std::unordered_map<std::string, int> sliced_axes;
+
+  // sliced_axes["name"] is the shape of sliced version of tensor "name".
+  // It's the shape when running sub-batches with pipeline parallel.
   std::unordered_map<std::string, std::vector<int>> sliced_schema;
 };
 

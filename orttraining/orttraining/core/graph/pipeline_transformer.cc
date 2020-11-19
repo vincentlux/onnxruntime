@@ -40,7 +40,7 @@ void CreateFakeOutput(
 
   // Assign dummy values.
   for (int64_t i = 0; i < reference_size; ++i) {
-    tensor_proto.add_float_data(1.0f);
+    tensor_proto.add_float_data(0.0f);
   }
   graph.AddInitializedTensor(tensor_proto);
 
@@ -444,7 +444,6 @@ void FindPipelineLandmarks(
 Status TransformGraphForPipeline(
     Graph& graph,
     const std::unordered_set<std::string>& weights_to_train,
-    const std::vector<std::string>& graph_output_names,
     pipeline::PipelineContext& pipeline_context) {
   // Begin node of forward pass.
   Node* forward_recv{nullptr};
@@ -670,8 +669,8 @@ Status TransformGraphForPipeline(
     ResolveForTraining(graph, weights_to_train);
   }
 
-  for (size_t i = 0; i < graph_output_names.size(); ++i) {
-    const std::string name = graph_output_names[i];
+  for (size_t i = 0; i < pipeline_context.expected_output_names.size(); ++i) {
+    const std::string name = pipeline_context.expected_output_names[i];
 
     auto producer = graph.GetProducerNode(name);
     if (producer) {

@@ -15,7 +15,6 @@ void GetPipelineRecvInput(const Graph& graph, std::string& node_arg_name);
 Status TransformGraphForPipeline(
     Graph& graph,
     const std::unordered_set<std::string>& initializer_names_to_preserve,
-    const std::vector<std::string>& graph_output_names,
     pipeline::PipelineContext& pipeline_context);
 
 Status ApplyPipelinePartitionToMainGraph(
