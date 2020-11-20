@@ -153,7 +153,7 @@ static void TestOptimizerGraphBuilderWithInitialStates(OptimizerGraphConfig conf
   std::vector<float> values = {4.f};
   std::vector<int64_t> uc_value = {3};
   NameMLValMap shared_states;
-  
+
   for (auto& opt_config_it : weight_names_to_opt_configs) {
     NameMLValMap per_weight_states;
     OrtValue ml_value;
@@ -203,6 +203,34 @@ TEST_F(OptimizerGraphBuilderTest, Default_FullPrecision_Lamb) {
   config.gradient_accumulation_steps = 1;
   config.use_mixed_precision = false;
   TestOptimizerGraphBuilderWithInitialStates(config, graph_, k_lamb_optimizer_op_name);
+}
+
+TEST_F(OptimizerGraphBuilderTest, ZeroSplitInitialOptimizerState) {
+  NameMLValMap initial_states;
+  std::vector<int64_t> param_dims = {784, 128};
+  int64_t num_ele = std::accumulate(param_dims.begin(), param_dims.end(), 1, std::multiplies<int64_t>());
+  for (auto& param_prefix : onnxruntime::test::MOMENT_PREFIX) {
+    MLValue mlValue;
+    std::vector<float> param_value(num_ele);
+    std::generate(param_value.begin(), param_value.end(), [n = 0]() mutable { return static_cast<float>(++n); });
+
+    TrainingUtil::CreateCpuMLValue<float>(param_dims, param_value, &mlValue);
+    initial_states.insert(std::make_pair(param_prefix, std::move(mlValue)));
+  }
+
+  int64_t partition_offset = 10;
+  int64_t partition_size = 500;
+  PartitionOptimizerState(partition_offset, partition_size, initial_states);
+
+  std::vector<float> expected_vec(partition_size);
+  std::generate(expected_vec.begin(), expected_vec.end(), [n = partition_offset]() mutable { return static_cast<float>(++n); });
+
+  for (const auto& state : initial_states) {
+    auto& init_tensor = state.second.Get<Tensor>();
+    const std::vector<float> found(init_tensor.Data<float>(),
+                                   init_tensor.Data<float>() + partition_size);
+    ASSERT_EQ(expected_vec, found);
+  }
 }
 
 static void TestDefaultOptimizerGraphBuilder(OptimizerGraphConfig config, Graph& graph) {
