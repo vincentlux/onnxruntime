@@ -1,6 +1,6 @@
 jobs:
 - job: Linux_Build
-  timeoutInMinutes: 120
+  timeoutInMinutes: 360
   workspace:
     clean: all
   pool: Linux-CPU
@@ -31,7 +31,7 @@ jobs:
           onnxruntimebuildcache.azurecr.io/internal/azureml/onnxruntimecentoscpubuild:ch3 \
             python3 /onnxruntime_src/tools/ci_build/build.py \
               --build_dir /build --cmake_generator Ninja \
-              --config Debug Release \
+              --config RelWithDebInfo \
               --skip_submodule_sync \
               --build_shared_lib \
               --parallel \
@@ -39,7 +39,7 @@ jobs:
               --use_openmp \
               --enable_onnx_tests \
               --enable_symbolic_shape_infer_tests \
-              --use_mklml --enable_pybind --build_java --build_nodejs
+              --enable_pybind --build_java --build_nodejs --cmake_extra_defines onnxruntime_USE_VALGRIND=ON
       workingDirectory: $(Build.SourcesDirectory)
   - task: Docker@2
     displayName: logout
@@ -53,6 +53,21 @@ jobs:
       testResultsFiles: '**/*.results.xml'
       searchFolder: '$(Build.BinariesDirectory)'
       testRunTitle: 'Unit Test Run'
+    condition: succeededOrFailed()
+
+
+  - task: CopyFiles@2
+    displayName: 'Copy valgrind log to: $(Build.ArtifactStagingDirectory)'
+    inputs:
+      SourceFolder: '$(Build.BinariesDirectory)/RelWithDebInfo/Testing/Temporary/'
+      Contents: 'MemoryChecker.*.log'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    condition: succeededOrFailed()
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: ONNXRuntime python wheel'
+    inputs:
+      ArtifactName: onnxruntime
     condition: succeededOrFailed()
 
   - template: templates/component-governance-component-detection-steps.yml
