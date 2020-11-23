@@ -14,10 +14,25 @@ logging.basicConfig(
     level=logging.DEBUG)
 log = logging.getLogger("DistributedTests")
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cwd", help="Path to the current working directory")
     return parser.parse_args()
+
+
+def run_checkpointing_aggregation_tests(cwd):
+    log.info("Running multi-GPU checkpointing tests.")
+
+    import torch
+    ngpus = torch.cuda.device_count()
+
+    # generate checkpoint files required in orttraining_test_checkpoint_aggregation.py
+    run_subprocess(['mpirun', '-n', str(ngpus), '-x', 'NCCL_DEBUG=INFO', sys.executable,
+                    'orttrainer_bert_toy_onnx_ckpt_gen.py'], cwd=cwd)
+
+    run_subprocess([sys.executable, '-m', 'pytest', '-sv', 'orttraining_test_checkpoint_aggregation.py'], cwd=cwd)
+
 
 def main():
     import torch
@@ -32,6 +47,7 @@ def main():
     log.info("Running distributed tests pipeline")
 
     # TODO: Add distributed test suite here.
+    run_checkpointing_aggregation_tests(cwd)
 
     return 0
 
