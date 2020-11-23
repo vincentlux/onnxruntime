@@ -16,11 +16,17 @@
 namespace onnxruntime {
 namespace training {
 
+constexpr char SHARED_STATES_KEY[] = "shared_optimizer_state";
+
 class TrainingSession : public InferenceSession {
  public:
   typedef std::unordered_map<std::string /*OpType*/,
                              std::vector<std::pair<size_t /*InputIndex*/, float /*value*/>>>
       ImmutableWeights;
+  
+  typedef std::unordered_map<std::string /* Model weight name*/,
+                             NameMLValMap /* 'Moment_1': OrtValue, 'Moment_2': OrtValue etc...*/>
+                            OptimizerState;
 
   TrainingSession(const SessionOptions& session_options, const Environment& env)
       : InferenceSession(session_options, env) {}
@@ -291,7 +297,7 @@ class TrainingSession : public InferenceSession {
    */
   common::Status SetStateTensors(const NameMLValMap& state_tensors, bool strict = false);
 
-  //common::Status SetStateTensors(const NameMLValMap& model_tensors, const NameMLValMap& optimizer_tensors, bool strict = false);
+  common::Status SetModelOptState(const NameMLValMap& model_tensors, const std::unordered_map<std::string, NameMLValMap>& optimizer_tensors, bool strict = false);
 
   /**
    * Gets the state tensors.
