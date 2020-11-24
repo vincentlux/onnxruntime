@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include "gsl/gsl"
+#include "orttraining/core/framework/distributed_run_context.h"
 #include "orttraining/training_ops/cpu/controlflow/event_pool.h"
 #include "core/framework/ml_value.h"
 
@@ -132,6 +133,8 @@ class PipelineSlot {
 
   std::vector<PipelineTask> GetTasks() { return tasks_; }
 
+  int Size() const { return static_cast<int>(tasks_.size()); }
+
  private:
   // Actions which can be executed in parallel in this time slot.
   std::vector<PipelineTask> tasks_;
@@ -198,6 +201,7 @@ class PipelineScheduler {
   void CreateComputeSchedule();
   void InsertEvents(std::vector<std::vector<PipelineSlot>>& schedule, const size_t num_events_per_slot, const std::vector<int> initial_events);
   void CreateFullSchedule();
+  void MapStageIdToMpiRank();
   int FindSendRecvTime(const int upstream_compute_time, const int upstream_stage, const int stage) const;
   void InsertForwardCompute(const int batch_id, const std::vector<int> forward_time);
   void InsertBackwardCompute(const int batch_id, const std::vector<int> forward_time, const std::vector<int> backward_time);
