@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#include "orttraining/models/runner/pipeline.h"
+#include "orttraining/core/framework/pipeline.h"
 
 #include <algorithm>
 #include <iostream>
@@ -11,10 +11,6 @@
 #include <stdexcept>
 #include <thread>
 #include <iomanip>
-
-#include "gsl/gsl"
-#include "core/framework/ml_value.h"
-#include "orttraining/training_ops/cpu/controlflow/event_pool.h"
 
 namespace onnxruntime {
 namespace training {

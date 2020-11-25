@@ -35,6 +35,7 @@
 #include "orttraining/core/graph/horovod_adapters.h"
 #endif
 
+#include "orttraining/training_ops/cpu/controlflow/event_pool.h"
 #if defined(USE_NCCL) && defined(USE_NCCL_P2P)
 #include "orttraining/training_ops/cuda/communication/nccl_service.h"
 #endif
