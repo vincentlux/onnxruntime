@@ -11,7 +11,7 @@ namespace cuda {
 Status AdasumAllReduce::ComputeInternal(OpKernelContext* context) const {
 
   int vhdd_start_level = 1;
-  if (adasum_reduce_algo_ == training::AdasumReductionType::GpuHierarchical) {
+  if (adasum_reduce_algo_ == training::AdasumReductionType::GpuHierarchicalReduction) {
     vhdd_start_level = training::DistributedRunContext::GetInstance().GroupSize(training::WorkerGroupType::NodeLocalDataParallel);
   }
   // Get tensor count
@@ -22,17 +22,11 @@ Status AdasumAllReduce::ComputeInternal(OpKernelContext* context) const {
 
   int64_t total_recv_buffer_len = 0;
 
-  size_t size_in_bytes = 0;
-  for (int i = 0; i < num_tensors; ++i) {
-    const Tensor* x_tensor = context->Input<Tensor>(i);
-    tensor_offsets.push_back(size_in_bytes);
-
-    size_in_bytes = x_tensor->SizeInBytes();
-    total_recv_buffer_len += size_in_bytes;
-
-    tensor_sizes.push_back(size_in_bytes);
-    tensor_element_counts.push_back((int)x_tensor->Shape().Size());
-  }
+  contrib::ComputeTensorSizeAndBufferLength(context,
+                                   tensor_element_counts,
+                                   tensor_offsets,
+                                   tensor_sizes,
+                                   total_recv_buffer_len);
 
   // Allocate temp scratch buffer in cpu space.
   AllocatorPtr allocator;
