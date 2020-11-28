@@ -183,7 +183,7 @@ TEST_F(OptimizerGraphBuilderTest, Default_WithGradientAccumulation_WithMixedPrec
   TestDefaultOptimizerGraphBuilder(config, graph_);
 }
 
-#if defined(USE_NCCL)
+#if defined(ORT_USE_NCCL)
 static void TestAllreduceOptimizerGraphBuilder(OptimizerGraphConfig config, Graph& graph) {
   AllreduceOptimizerGraphBuilder optimizer_graph_builder(
       GetOptimizerBuilderRegistry(), config, GetOptInfoMap());
@@ -216,9 +216,6 @@ static void TestAllreduceOptimizerGraphBuilder(OptimizerGraphConfig config, Grap
   ASSERT_EQ(GetOpCount(op_counts, k_optimizer_op_name), k_weight_names.size());
 }
 
-#endif
-
-#ifdef USE_HOROVOD
 static void TestAdasumOptimizerGraphBuilder(OptimizerGraphConfig config, Graph& graph) {
   AdasumOptimizerGraphBuilder optimizer_graph_builder(
       GetOptimizerBuilderRegistry(), config, GetOptInfoMap());
@@ -253,7 +250,9 @@ static void TestAdasumOptimizerGraphBuilder(OptimizerGraphConfig config, Graph& 
   ASSERT_EQ(GetOpCount(op_counts, k_optimizer_op_name), k_weight_names.size());
 }
 
-#if defined(USE_NCCL) || defined(ORT_USE_MPI)
+#endif
+
+#if defined(ORT_USE_NCCL) || defined(USE_MPI)
 
 TEST_F(OptimizerGraphBuilderTest, Adasum_NoGradientAccumulation_NoMixedPrecision) {
   OptimizerGraphConfig config;
@@ -295,9 +294,9 @@ TEST_F(OptimizerGraphBuilderTest, Adasum_WithGradientAccumulation_WithMixedPreci
   config.loss_scale_input_name = k_loss_scaling_factor_name;
   TestAdasumOptimizerGraphBuilder(config, graph_);
 }
-#endif //USE_NCCL || ORT_USE_MPI
+#endif //ORT_USE_NCCL || USE_MPI
 
-#ifdef USE_NCCL
+#ifdef ORT_USE_NCCL
 TEST_F(OptimizerGraphBuilderTest, Allreduce_NoGradientAccumulation_NoMixedPrecision) {
   OptimizerGraphConfig config;
   config.data_parallel_group_size = 4;
@@ -411,7 +410,7 @@ TEST_F(OptimizerGraphBuilderTest, ZeRO_WithGradientAccumulation_WithMixedPrecisi
   TestZeROOptimizerGraphBuilder(config, graph_);
 }
 
-#endif  // USE_NCCL
+#endif  // ORT_USE_NCCL
 
 }  // namespace test
 }  // namespace training
